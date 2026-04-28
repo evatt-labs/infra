@@ -52,6 +52,11 @@ locals {
     "roles/resourcemanager.projectMover",
     "roles/serviceusage.serviceUsageAdmin",
     "roles/iam.organizationRoleAdmin",
+    # Manage WIF pools/providers + service accounts the CI itself depends
+    # on (chicken-and-egg: tofu can't plan ci.tf without read access to
+    # the WIF resources that authenticate it). Cascades to all projects.
+    "roles/iam.workloadIdentityPoolAdmin",
+    "roles/iam.serviceAccountAdmin",
     # Read-only on org IAM for plan diffs against existing bindings.
     "roles/iam.securityReviewer",
   ]
