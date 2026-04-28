@@ -51,7 +51,7 @@ resource "google_project" "kraai_local" {
 # admin folder
 # ──────────────────────────────────────────────────────────────────
 
-# GAM project — holds the SA key for Workspace admin via GAM7.
+# GAM project — holds the SA key for Workspace admin via GAM.
 # Org policy `iam.disableServiceAccountKeyUpload` is enforced everywhere
 # EXCEPT inside this folder (override defined in org.tf).
 resource "google_project" "gam" {
@@ -81,14 +81,6 @@ resource "google_project" "evattlabs_admin" {
 # ──────────────────────────────────────────────────────────────────
 # sandbox folder
 # ──────────────────────────────────────────────────────────────────
-
-# Auto-created when Jordan first used Gemini API / AI Studio. Probably
-# unused; leave it parked here until decided.
-resource "google_project" "gemini_default" {
-  name       = "Default Gemini Project"
-  project_id = "gen-lang-client-0159866751"
-  folder_id  = google_folder.sandbox.id
-}
 
 # Hosts the Claude Code MCP service accounts (Gmail/Calendar/Drive
 # integrations via `claude-workspace@...`). Auto-created on org sign-up,
