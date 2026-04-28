@@ -1,0 +1,102 @@
+name: tofu plan
+
+on:
+  pull_request:
+    paths:
+      - "**.tf"
+      - ".github/workflows/tofu-*.yml"
+      - "backend.hcl"
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+concurrency:
+  group: tofu-plan-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  TOFU_VERSION: 1.10.6
+  WIF_PROVIDER: projects/801452666066/locations/global/workloadIdentityPools/github-actions/providers/github
+  TOFU_CICD_SA: tofu-cicd@evattlabs-admin.iam.gserviceaccount.com
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: ${{ env.TOFU_VERSION }}
+          tofu_wrapper: false
+
+      - name: Configure R2 credentials
+        env:
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: |
+          mkdir -p ~/.aws
+          umask 077
+          cat > ~/.aws/credentials <<EOF
+          [r2]
+          aws_access_key_id     = ${R2_ACCESS_KEY_ID}
+          aws_secret_access_key = ${R2_SECRET_ACCESS_KEY}
+          EOF
+
+      - id: gcp-auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.TOFU_CICD_SA }}
+
+      - name: tofu fmt -check
+        run: tofu fmt -check -recursive
+
+      - name: tofu init
+        run: tofu init -backend-config=backend.hcl
+
+      - name: tofu validate
+        run: tofu validate
+
+      - id: plan
+        run: |
+          set -o pipefail
+          tofu plan -no-color -out=tfplan 2>&1 | tee plan.txt
+        continue-on-error: true
+
+      - name: Build PR comment
+        if: always()
+        run: |
+          {
+            echo '## tofu plan'
+            echo ''
+            if [ "${{ steps.plan.outcome }}" = "success" ]; then
+              echo '<details><summary>Plan output</summary>'
+              echo ''
+              echo '```'
+              head -c 60000 plan.txt
+              if [ "$(wc -c < plan.txt)" -gt 60000 ]; then
+                echo ''
+                echo '...[truncated to 60K chars]'
+              fi
+              echo '```'
+              echo '</details>'
+            else
+              echo 'Plan FAILED. See action logs for full output.'
+              echo ''
+              echo '```'
+              tail -c 10000 plan.txt
+              echo '```'
+            fi
+          } > plan-comment.md
+
+      - if: always()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: tofu-plan
+          path: plan-comment.md
+
+      - if: steps.plan.outcome == 'failure'
+        run: exit 1

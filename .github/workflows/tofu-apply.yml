@@ -1,0 +1,63 @@
+name: tofu apply
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**.tf"
+      - ".github/workflows/tofu-*.yml"
+      - "backend.hcl"
+
+permissions:
+  contents: read
+  id-token: write
+
+# Single global lock so two applies never race. Don't cancel an in-flight
+# apply: the safer failure mode is "wait" not "abandon mid-state".
+concurrency:
+  group: tofu-apply
+  cancel-in-progress: false
+
+env:
+  TOFU_VERSION: 1.10.6
+  WIF_PROVIDER: projects/801452666066/locations/global/workloadIdentityPools/github-actions/providers/github
+  TOFU_CICD_SA: tofu-cicd@evattlabs-admin.iam.gserviceaccount.com
+
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: ${{ env.TOFU_VERSION }}
+          tofu_wrapper: false
+
+      - name: Configure R2 credentials
+        env:
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: |
+          mkdir -p ~/.aws
+          umask 077
+          cat > ~/.aws/credentials <<EOF
+          [r2]
+          aws_access_key_id     = ${R2_ACCESS_KEY_ID}
+          aws_secret_access_key = ${R2_SECRET_ACCESS_KEY}
+          EOF
+
+      - id: gcp-auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.TOFU_CICD_SA }}
+
+      - name: tofu init
+        run: tofu init -backend-config=backend.hcl
+
+      - name: tofu validate
+        run: tofu validate
+
+      - name: tofu apply
+        run: tofu apply -auto-approve

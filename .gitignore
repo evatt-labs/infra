@@ -8,9 +8,6 @@
 crash.log
 crash.*.log
 
-# Backend config — contains R2 bucket info and profile name; safe-ish but kept local
-backend.hcl
-
 # Variable files that may contain account-specific values
 *.auto.tfvars
 *.auto.tfvars.json
