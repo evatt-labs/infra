@@ -23,7 +23,7 @@ env:
 
 jobs:
   plan:
-    runs-on: ubuntu-24.04
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
 
@@ -37,13 +37,14 @@ jobs:
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         run: |
-          mkdir -p ~/.aws
           umask 077
-          cat > ~/.aws/credentials <<EOF
+          mkdir -p "${{ runner.temp }}/aws"
+          cat > "${{ runner.temp }}/aws/credentials" <<EOF
           [r2]
           aws_access_key_id     = ${R2_ACCESS_KEY_ID}
           aws_secret_access_key = ${R2_SECRET_ACCESS_KEY}
           EOF
+          echo "AWS_SHARED_CREDENTIALS_FILE=${{ runner.temp }}/aws/credentials" >> "$GITHUB_ENV"
 
       - id: gcp-auth
         uses: google-github-actions/auth@v2
