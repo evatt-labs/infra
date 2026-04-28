@@ -1,0 +1,38 @@
+# Copy to backend.hcl. backend.hcl is gitignored.
+#
+# Cloudflare R2 used as an S3-compatible OpenTofu state backend.
+#
+# The google provider uses Application Default Credentials (gcloud auth
+# application-default login) — completely separate from this backend's R2
+# creds, so the two don't fight.
+#
+# Bootstrap:
+#   1. Bucket: wrangler r2 bucket create evattlabs-tfstate
+#   2. R2 token at dash.cloudflare.com -> R2 -> Manage R2 API Tokens.
+#      Object Read & Write, scoped to evattlabs-tfstate.
+#   3. Add to ~/.aws/credentials under [r2-evattlabs]:
+#        [r2-evattlabs]
+#        aws_access_key_id     = <R2 access key id>
+#        aws_secret_access_key = <R2 secret access key>
+#   4. Replace the endpoint URL below with your account's R2 endpoint.
+#      (find at dash.cloudflare.com -> R2 -> any bucket -> "Settings"
+#       or under "S3 API" — looks like https://<account>.r2.cloudflarestorage.com)
+#   5. cp backend.hcl.example backend.hcl
+#      tofu init -backend-config=backend.hcl -reconfigure
+
+bucket  = "evattlabs-tfstate"
+key     = "gcp/terraform.tfstate"
+region  = "auto"
+profile = "r2-evattlabs"
+
+endpoints = {
+  s3 = "https://<CLOUDFLARE_ACCOUNT_ID>.r2.cloudflarestorage.com"
+}
+
+# R2 doesn't speak all of S3's metadata APIs — skip them.
+skip_credentials_validation = true
+skip_metadata_api_check     = true
+skip_region_validation      = true
+skip_requesting_account_id  = true
+skip_s3_checksum            = true
+use_path_style              = true
