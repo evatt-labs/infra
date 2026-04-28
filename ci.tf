@@ -93,8 +93,12 @@ resource "google_iam_workload_identity_pool_provider" "github" {
   display_name                       = "GitHub OIDC"
 
   oidc {
-    issuer_uri        = "https://token.actions.githubusercontent.com"
-    allowed_audiences = ["https://github.com/evatt-labs"]
+    # No allowed_audiences: default audience is the WIF provider URI,
+    # which is what google-github-actions/auth@v2 sends out of the box.
+    # Pinning a custom audience requires audience: ... on the action input
+    # too, and the attribute_condition below already restricts which repos
+    # can use this provider.
+    issuer_uri = "https://token.actions.githubusercontent.com"
   }
 
   attribute_mapping = {
