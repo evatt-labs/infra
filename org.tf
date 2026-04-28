@@ -122,3 +122,75 @@ resource "google_org_policy_policy" "skip_default_network" {
     }
   }
 }
+
+# ──────────────────────────────────────────────────────────────────
+# The four policies below were set by Google's Cloud Setup wizard
+# on 2026-01-24. Importing them into TF so they're a single source
+# of truth and don't drift silently.
+#
+#   tofu import google_org_policy_policy.uniform_bucket_level_access \
+#     organizations/493326646328/policies/storage.uniformBucketLevelAccess
+#   tofu import google_org_policy_policy.essential_contacts_domains \
+#     organizations/493326646328/policies/essentialcontacts.allowedContactDomains
+#   tofu import google_org_policy_policy.restrict_protocol_forwarding \
+#     organizations/493326646328/policies/compute.restrictProtocolForwardingCreationForTypes
+#   tofu import google_org_policy_policy.zonal_dns_only \
+#     organizations/493326646328/policies/compute.setNewProjectDefaultToZonalDNSOnly
+# ──────────────────────────────────────────────────────────────────
+
+# Force uniform bucket-level access on all new GCS buckets (no ACLs).
+resource "google_org_policy_policy" "uniform_bucket_level_access" {
+  name   = "organizations/${local.org_id}/policies/storage.uniformBucketLevelAccess"
+  parent = "organizations/${local.org_id}"
+
+  spec {
+    rules {
+      enforce = "TRUE"
+    }
+  }
+}
+
+# Restrict who can be added as an Essential Contact to evattlabs.com only.
+resource "google_org_policy_policy" "essential_contacts_domains" {
+  name   = "organizations/${local.org_id}/policies/essentialcontacts.allowedContactDomains"
+  parent = "organizations/${local.org_id}"
+
+  spec {
+    rules {
+      values {
+        allowed_values = [
+          "@evattlabs.com",
+        ]
+      }
+    }
+  }
+}
+
+# Limit Protocol Forwarding rule creation to INTERNAL only (no external
+# protocol forwarding) - tightens lateral-movement blast radius.
+resource "google_org_policy_policy" "restrict_protocol_forwarding" {
+  name   = "organizations/${local.org_id}/policies/compute.restrictProtocolForwardingCreationForTypes"
+  parent = "organizations/${local.org_id}"
+
+  spec {
+    rules {
+      values {
+        allowed_values = [
+          "INTERNAL",
+        ]
+      }
+    }
+  }
+}
+
+# New projects default to zonal DNS only (faster resolution, no global DNS).
+resource "google_org_policy_policy" "zonal_dns_only" {
+  name   = "organizations/${local.org_id}/policies/compute.setNewProjectDefaultToZonalDNSOnly"
+  parent = "organizations/${local.org_id}"
+
+  spec {
+    rules {
+      enforce = "TRUE"
+    }
+  }
+}

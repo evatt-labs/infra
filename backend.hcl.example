@@ -10,8 +10,8 @@
 #   1. Bucket: wrangler r2 bucket create evattlabs-tfstate
 #   2. R2 token at dash.cloudflare.com -> R2 -> Manage R2 API Tokens.
 #      Object Read & Write, scoped to evattlabs-tfstate.
-#   3. Add to ~/.aws/credentials under [r2-evattlabs]:
-#        [r2-evattlabs]
+#   3. Add to ~/.aws/credentials under [r2]:
+#        [r2]
 #        aws_access_key_id     = <R2 access key id>
 #        aws_secret_access_key = <R2 secret access key>
 #   4. Replace the endpoint URL below with your account's R2 endpoint.
@@ -23,7 +23,7 @@
 bucket  = "evattlabs-tfstate"
 key     = "gcp/terraform.tfstate"
 region  = "auto"
-profile = "r2-evattlabs"
+profile = "r2"
 
 endpoints = {
   s3 = "https://<CLOUDFLARE_ACCOUNT_ID>.r2.cloudflarestorage.com"

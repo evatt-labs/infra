@@ -23,10 +23,10 @@
 
 # The verified OAuth project. DO NOT DELETE OR RECREATE.
 resource "google_project" "kraai_prod" {
-  name       = "Kraai"
-  project_id = "kraai-492310"
-  folder_id  = google_folder.production.id
-  # billing_account intentionally omitted until known; managed in console for now.
+  name            = "Kraai"
+  project_id      = "kraai-492310"
+  folder_id       = google_folder.production.id
+  billing_account = local.billing_account_id
 
   lifecycle {
     prevent_destroy = true
@@ -64,6 +64,20 @@ resource "google_project" "gam" {
   }
 }
 
+# Admin / management billing project. ADC quota project for tofu runs
+# and any other org-level admin API calls. No application workloads
+# should land here — keeps the billing surface clean.
+resource "google_project" "evattlabs_admin" {
+  name            = "Evatt Labs Admin"
+  project_id      = "evattlabs-admin"
+  folder_id       = google_folder.admin.id
+  billing_account = local.billing_account_id
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
 # ──────────────────────────────────────────────────────────────────
 # sandbox folder
 # ──────────────────────────────────────────────────────────────────
@@ -76,10 +90,20 @@ resource "google_project" "gemini_default" {
   folder_id  = google_folder.sandbox.id
 }
 
-# Auto-created on org sign-up (early 2026). Probably empty. Audit before
-# deleting.
-resource "google_project" "evattlabs_old" {
-  name       = "Evatt Labs"
-  project_id = "resolute-world-485311-b8"
-  folder_id  = google_folder.sandbox.id
+# Hosts the Claude Code MCP service accounts (Gmail/Calendar/Drive
+# integrations via `claude-workspace@...`). Auto-created on org sign-up,
+# previously named "Evatt Labs" - renamed to make the actual purpose
+# obvious. Project ID is permanent and can't be changed.
+resource "google_project" "claude_mcp" {
+  name            = "Claude MCP Access"
+  project_id      = "resolute-world-485311-b8"
+  folder_id       = google_folder.sandbox.id
+  billing_account = local.billing_account_id
+}
+
+# Renamed from `evattlabs_old` -> `claude_mcp` (2026-04-28). Keeps state
+# in sync without a destroy/recreate.
+moved {
+  from = google_project.evattlabs_old
+  to   = google_project.claude_mcp
 }
