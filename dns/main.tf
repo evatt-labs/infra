@@ -22,48 +22,42 @@ resource "cloudflare_zone" "evattlabs_com" {
   }
 }
 
-# ============================================================================
-# Resend domain verification — DKIM
-# ============================================================================
+# Resend domain verification -- DKIM
 resource "cloudflare_record" "resend_dkim" {
   zone_id = cloudflare_zone.evattlabs_com.id
   name    = "resend._domainkey"
   type    = "TXT"
   content = var.resend_dkim_value
-  ttl     = 1
-  comment = "Resend DKIM (managed by evattlabs-infra/dns)"
+  ttl     = 3600
 }
 
-# ============================================================================
-# Resend MAIL FROM subdomain — MX + SPF
-# ============================================================================
+# Resend MAIL FROM subdomain -- MX
 resource "cloudflare_record" "resend_mail_from_mx" {
   zone_id  = cloudflare_zone.evattlabs_com.id
   name     = var.resend_mail_from_subdomain
   type     = "MX"
   content  = "feedback-smtp.us-east-1.amazonses.com"
   priority = 10
-  ttl      = 1
-  comment  = "Resend MAIL FROM bounce/complaint endpoint (managed by evattlabs-infra/dns)"
+  ttl      = 3600
 }
 
+# Resend MAIL FROM subdomain -- SPF.
+# Hard-fail (-all) matches the existing pre-tofu record. evattlabs.com is
+# a live sender via Resend; loosening to ~all needs deliberate review.
 resource "cloudflare_record" "resend_mail_from_spf" {
   zone_id = cloudflare_zone.evattlabs_com.id
   name    = var.resend_mail_from_subdomain
   type    = "TXT"
-  content = "v=spf1 include:amazonses.com ~all"
-  ttl     = 1
-  comment = "Resend MAIL FROM SPF (managed by evattlabs-infra/dns)"
+  content = "v=spf1 include:amazonses.com -all"
+  ttl     = 3600
 }
 
-# ============================================================================
-# DMARC monitoring policy
-# ============================================================================
+# DMARC enforcement -- p=quarantine + adkim=s, matching the live record.
+# No rua= reporting yet; add later as a deliberate, separate change.
 resource "cloudflare_record" "dmarc" {
   zone_id = cloudflare_zone.evattlabs_com.id
   name    = "_dmarc"
   type    = "TXT"
-  content = "v=DMARC1; p=none; rua=mailto:dmarc@evattlabs.com"
+  content = "v=DMARC1; p=quarantine; adkim=s"
   ttl     = 1
-  comment = "DMARC monitoring policy — pre-enforcement (managed by evattlabs-infra/dns)"
 }
