@@ -31,7 +31,14 @@ variable "manage_kraai_dev" {
 }
 
 variable "manage_evattlabs_com" {
-  description = "Manage evattlabs.com NS at Namecheap. Requires evattlabs-tfstate/dns/ to exist."
+  description = <<EOT
+Manage evattlabs.com NS at Namecheap. Requires:
+  1. evattlabs-tfstate/dns/ to exist (the CF zone outputs).
+  2. evattlabs.com to be in Jordan's Namecheap account.
+
+As of 2026-05-04 the domain is at Tucows (status pendingTransfer);
+flip this to true once the transfer to Namecheap completes.
+EOT
   type        = bool
   default     = false
 }
