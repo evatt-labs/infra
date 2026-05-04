@@ -1,16 +1,15 @@
 # ============================================================================
-# evattlabs.com — Cloudflare zone + DNS records
+# evattlabs.com — Cloudflare zone + DNS records (Resend email setup).
 # ============================================================================
 #
 # If the evattlabs.com zone DOES NOT exist in Cloudflare yet:
-#   tofu apply will create it. Then point Namecheap NS at the zone's
-#   assigned nameservers (handled by ../registrar/).
+#   tofu apply creates it. Then point Namecheap NS at the zone's assigned
+#   nameservers (handled by ../registrar/).
 #
 # If the evattlabs.com zone DOES exist already:
-#   `tofu import cloudflare_zone.evattlabs_com <zone-id>` first, then apply.
-#
-# Records below mirror the email-from-SES pattern at the apex.
-# (SES sender lives elsewhere; these records exist so SES can send + bounce.)
+#   Delete old records via dashboard first (brief outage), then:
+#   tofu init && tofu import cloudflare_zone.evattlabs_com <zone-id>
+#   tofu plan && tofu apply
 
 resource "cloudflare_zone" "evattlabs_com" {
   account_id = var.cloudflare_account_id
@@ -19,33 +18,48 @@ resource "cloudflare_zone" "evattlabs_com" {
   type       = "full"
 }
 
-# Apex MX → SES bounce-handling endpoint
-resource "cloudflare_record" "apex_mx_ses" {
+# ============================================================================
+# Resend domain verification — DKIM
+# ============================================================================
+resource "cloudflare_record" "resend_dkim" {
+  zone_id = cloudflare_zone.evattlabs_com.id
+  name    = "resend._domainkey"
+  type    = "TXT"
+  content = var.resend_dkim_value
+  ttl     = 1
+  comment = "Resend DKIM (managed by evattlabs-infra/dns)"
+}
+
+# ============================================================================
+# Resend MAIL FROM subdomain — MX + SPF
+# ============================================================================
+resource "cloudflare_record" "resend_mail_from_mx" {
   zone_id  = cloudflare_zone.evattlabs_com.id
-  name     = "evattlabs.com"
+  name     = var.resend_mail_from_subdomain
   type     = "MX"
   content  = "feedback-smtp.us-east-1.amazonses.com"
   priority = 10
-  ttl      = 1 # auto
-  comment  = "AWS SES bounce/complaint feedback (managed by evattlabs-infra/dns)"
+  ttl      = 1
+  comment  = "Resend MAIL FROM bounce/complaint endpoint (managed by evattlabs-infra/dns)"
 }
 
-# Apex SPF — authorize SES to send on behalf of evattlabs.com
-resource "cloudflare_record" "apex_spf" {
+resource "cloudflare_record" "resend_mail_from_spf" {
   zone_id = cloudflare_zone.evattlabs_com.id
-  name    = "evattlabs.com"
+  name    = var.resend_mail_from_subdomain
   type    = "TXT"
   content = "v=spf1 include:amazonses.com ~all"
   ttl     = 1
-  comment = "SPF — authorizes amazonses.com (managed by evattlabs-infra/dns)"
+  comment = "Resend MAIL FROM SPF (managed by evattlabs-infra/dns)"
 }
 
-# DMARC policy
+# ============================================================================
+# DMARC monitoring policy
+# ============================================================================
 resource "cloudflare_record" "dmarc" {
   zone_id = cloudflare_zone.evattlabs_com.id
-  name    = "_dmarc.evattlabs.com"
+  name    = "_dmarc"
   type    = "TXT"
   content = "v=DMARC1; p=none; rua=mailto:dmarc@evattlabs.com"
   ttl     = 1
-  comment = "DMARC monitoring policy (managed by evattlabs-infra/dns)"
+  comment = "DMARC monitoring policy — pre-enforcement (managed by evattlabs-infra/dns)"
 }
