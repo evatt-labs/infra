@@ -15,10 +15,17 @@ terraform.tfvars
 terraform.tfvars.json
 
 # direnv
-.envrc
 
 # OS / editor
 .DS_Store
 *.swp
 .idea/
 .vscode/
+
+# Local-dev secrets — only encrypted/example files committed
+secrets/*
+!secrets/*.enc.yaml
+!secrets/*.example.yaml
+!secrets/README.md
+!secrets/.gitkeep
+.envrc.local
