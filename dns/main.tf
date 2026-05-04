@@ -16,6 +16,10 @@ resource "cloudflare_zone" "evattlabs_com" {
   zone       = "evattlabs.com"
   plan       = "free"
   type       = "full"
+
+  lifecycle {
+    ignore_changes = [plan]
+  }
 }
 
 # ============================================================================
