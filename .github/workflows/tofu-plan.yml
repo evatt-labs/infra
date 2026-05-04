@@ -3,9 +3,13 @@ name: tofu plan
 on:
   pull_request:
     paths:
-      - "**.tf"
+      - "gcp/**.tf"
+      - "gcp/backend.hcl"
+      - "dns/**.tf"
+      - "dns/backend.hcl"
+      - "registrar/**.tf"
+      - "registrar/backend.hcl"
       - ".github/workflows/tofu-*.yml"
-      - "backend.hcl"
 
 permissions:
   contents: read
@@ -13,7 +17,7 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: tofu-plan-${{ github.event.pull_request.number }}
+  group: tofu-plan-${{ github.event.pull_request.number }}-${{ matrix.subdir || 'gcp' }}
   cancel-in-progress: true
 
 env:
@@ -24,6 +28,15 @@ env:
 jobs:
   plan:
     runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      matrix:
+        subdir:
+          - gcp
+          # Add 'dns' and 'registrar' here as those subdirs land.
+    defaults:
+      run:
+        working-directory: ${{ matrix.subdir }}
     steps:
       - uses: actions/checkout@v4
 
@@ -46,11 +59,26 @@ jobs:
           EOF
           echo "AWS_SHARED_CREDENTIALS_FILE=${{ runner.temp }}/aws/credentials" >> "$GITHUB_ENV"
 
+      # GCP auth needed for the gcp/ subdir; harmless for others (provider lazy-loaded).
       - id: gcp-auth
+        if: matrix.subdir == 'gcp' || matrix.subdir == 'dns'
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ env.WIF_PROVIDER }}
           service_account: ${{ env.TOFU_CICD_SA }}
+
+      - name: Cloudflare credentials
+        if: matrix.subdir == 'dns' || matrix.subdir == 'registrar'
+        run: |
+          echo "CLOUDFLARE_API_TOKEN=${{ secrets.CLOUDFLARE_API_TOKEN }}" >> "$GITHUB_ENV"
+
+      - name: Namecheap credentials
+        if: matrix.subdir == 'registrar'
+        run: |
+          echo "NAMECHEAP_USER_NAME=${{ secrets.NAMECHEAP_USER_NAME }}" >> "$GITHUB_ENV"
+          echo "NAMECHEAP_API_USER=${{ secrets.NAMECHEAP_API_USER }}" >> "$GITHUB_ENV"
+          echo "NAMECHEAP_API_KEY=${{ secrets.NAMECHEAP_API_KEY }}" >> "$GITHUB_ENV"
+          echo "NAMECHEAP_CLIENT_IP=${{ secrets.NAMECHEAP_CLIENT_IP }}" >> "$GITHUB_ENV"
 
       - name: tofu fmt -check
         run: tofu fmt -check -recursive
@@ -71,8 +99,8 @@ jobs:
         if: always()
         run: |
           {
-            echo '## tofu plan'
-            echo ''
+            echo "## tofu plan: \`${{ matrix.subdir }}\`"
+            echo ""
             if [ "${{ steps.plan.outcome }}" = "success" ]; then
               echo '<details><summary>Plan output</summary>'
               echo ''
@@ -96,8 +124,8 @@ jobs:
       - if: always()
         uses: marocchino/sticky-pull-request-comment@v2
         with:
-          header: tofu-plan
-          path: plan-comment.md
+          header: tofu-plan-${{ matrix.subdir }}
+          path: ${{ matrix.subdir }}/plan-comment.md
 
       - if: steps.plan.outcome == 'failure'
         run: exit 1

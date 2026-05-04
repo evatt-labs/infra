@@ -9,41 +9,79 @@ This repo manages the **shared platform layer** that products live on top of:
 - 🚧 **Projects** — including the verified `kraai-492310` OAuth project
 - 🔐 **Org policies** — the boring-but-load-bearing security baseline
 - 👥 **Workspace** — users, groups, OUs (eventually, via `googleworkspace` provider)
-- 🌐 **DNS for the company-level domains** (TBD)
+- 🌐 **DNS for company-level domains** — `evattlabs.com` and `kraai.dev` zones, records, registrar NS bindings
+- 🔑 **Namecheap registrar** — domain ownership + NS records pointing at Cloudflare
 
 This repo does NOT manage:
 
 | Lives in | What |
 |---|---|
-| `~/code/kraai` (private monorepo) | Kraai product infra (when prod stack lands again) |
-| `~/homelab` (public) | Homelab — Trantor / Proxmox / cloudflared on the homelab side |
-| `~/code/evattlabs` | Marketing site — `evattlabs.com` content |
+| `~/Code/kraai-infra` (private) | Kraai product platform: per-env Cloud Run, Kraai-specific R2 buckets, Stripe products, etc. |
+| `~/Code/kraai-{runtime,control,web,…}` | Per-service Kraai code |
+| `~/Code/lab` (private) | Helicon + Trantor NixOS dotfiles |
+| `~/Code/evattlabs` | Marketing site — `evattlabs.com` content |
 
-## Bootstrap
+## Layout
+
+The repo is split by **vendor / concern**, each subdir its own tofu root with its own state file in `evattlabs-tfstate`:
+
+```
+evattlabs-infra/
+├── README.md                  ← this file
+├── .github/workflows/
+│   ├── tofu-plan.yml          ← matrix over subdirs
+│   └── tofu-apply.yml         ← matrix over subdirs
+├── gcp/                       ← GCP org/folders/projects/IAM/policies/CI
+│   ├── backend.tf             ← s3-compat (R2) backend block (partial)
+│   ├── backend.hcl            ← bucket=evattlabs-tfstate, key=gcp/terraform.tfstate
+│   ├── ci.tf                  ← WIF + tofu-cicd SA
+│   ├── folders.tf             ← 4 folders
+│   ├── iam.tf                 ← group ↔ role bindings
+│   ├── locals.tf              ← org id, domain, etc.
+│   ├── org.tf                 ← organization-level resources & policies
+│   ├── projects.tf            ← project imports + new projects
+│   ├── providers.tf           ← google, google-beta
+│   └── versions.tf
+├── dns/                       ← (planned) Cloudflare zones + DNS records for kraai.dev / evattlabs.com
+│   ├── backend.hcl            ← key=dns/terraform.tfstate
+│   └── ...
+└── registrar/                 ← (planned) Namecheap NS records pointing at Cloudflare
+    ├── backend.hcl            ← key=registrar/terraform.tfstate
+    └── ...
+```
+
+The two existing tofu states under `kraai-tfstate/cloudflare/` and `kraai-tfstate/dns/` are scheduled for **nuke + recreate** in the new `dns/` and `registrar/` subdirs (no original `.tf` source survived). Brief DNS outage acceptable since `kraai.dev` is pre-launch.
+
+State buckets:
+
+| Bucket | Holds |
+|---|---|
+| `evattlabs-tfstate` | Org-foundational state — domains, DNS, GCP projects, registrar (this repo's outputs) |
+| `kraai-tfstate` | Kraai product-specific state — per-env Cloud Run, Kraai R2 buckets, Stripe products, etc. (`kraai-infra` repo's outputs) |
+
+## Bootstrap (per subdir)
 
 ```sh
-# State backend
+# State backend (one-time, already done)
 wrangler r2 bucket create evattlabs-tfstate
-# Create R2 API token at dash.cloudflare.com (Object R/W, scoped to evattlabs-tfstate)
-# Add to ~/.aws/credentials under [r2-evattlabs]
+# Create R2 API token (S3-compat, scoped to evattlabs-tfstate); add to ~/.aws/credentials [r2]
 
-# Local init
-cp backend.hcl.example backend.hcl   # fill in values
-cp providers.auto.tfvars.example providers.auto.tfvars   # if needed
+# Per-subdir local init
+cd gcp
 gcloud auth application-default login   # for google provider creds
 tofu init -backend-config=backend.hcl
 tofu plan
 ```
 
-## What's Terraformed
+## What's Terraformed (gcp/)
 
 | Resource | Status |
 |---|---|
-| Org policies | TBD |
-| Folders (production/development/admin/sandbox) | TBD |
-| Existing projects (imported) | TBD |
-| New projects | n/a yet |
-| IAM bindings on `gcp-*` groups | TBD |
+| Org policies (11) | ✅ live |
+| Folders (production/development/admin/sandbox) | ✅ live |
+| Projects (`evattlabs-admin`, `kraai-prod`, `kraai-local`, `claude-mcp`, `gam`) | ✅ live |
+| WIF pool + provider for `github` | ✅ live |
+| `tofu-cicd` service account + IAM | ✅ live |
 | Workspace users/groups/OUs | not yet (v2) |
 
 ## What's NOT Terraformed (and why)
@@ -79,26 +117,13 @@ Manage in the console for prod (`kraai-492310`). Client IDs and secrets in TF st
 are a security smell, and verification is per-consent-screen anyway, so there's no
 benefit. Dev/staging clients in `kraai-local` *may* eventually be TF'd if useful.
 
-## Layout
-
-```
-evattlabs-infra/
-├── README.md                  ← this file
-├── backend.tf                 ← s3-compatible (R2) backend block
-├── backend.hcl.example        ← copy to backend.hcl, then `tofu init`
-├── providers.tf               ← google, google-beta
-├── versions.tf                ← required_providers
-├── org.tf                     ← organization-level resources & policies
-├── folders.tf                 ← 4 folders
-├── projects.tf                ← project imports + new project definitions
-├── iam.tf                     ← group ↔ role bindings (later)
-└── locals.tf                  ← shared values (org id, domain, etc.)
-```
-
 ## Auth model
 
-- Local: `gcloud auth application-default login` as Jordan (org admin)
-- CI: not wired yet — apply from Helicon for now
+- **Local:** `gcloud auth application-default login` as Jordan (org admin) for the GCP provider.
+  R2 backend uses `~/.aws/credentials [r2]` profile.
+  Cloudflare provider (when `dns/` lands) reads `CLOUDFLARE_API_TOKEN` env var.
+  Namecheap provider (when `registrar/` lands) reads `NAMECHEAP_*` env vars.
+- **CI:** Workload Identity Federation → `tofu-cicd@evattlabs-admin.iam.gserviceaccount.com`. R2 creds via GHA secrets.
 
 ## Critical rules
 
@@ -106,4 +131,5 @@ evattlabs-infra/
 2. **Never** change `kraai-492310`'s consent screen via Terraform. See above.
 3. **Never** widen org policies that allow SA key uploads beyond `/admin` folder.
 4. **Always** run `tofu plan` and read every line of the diff before `tofu apply`.
-5. State backend creds (`r2-evattlabs` AWS profile) are local-only — never committed.
+5. State backend creds (`r2` AWS profile) are local-only — never committed.
+6. **Never** put Kraai product-specific state in this repo. Kraai's per-env Cloud Run / R2 / Stripe state lives in `~/Code/kraai-infra` against `kraai-tfstate` bucket.
