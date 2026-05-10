@@ -40,5 +40,5 @@ As of 2026-05-04 the domain is at Tucows (status pendingTransfer);
 flip this to true once the transfer to Namecheap completes.
 EOT
   type        = bool
-  default     = false
+  default     = true
 }
