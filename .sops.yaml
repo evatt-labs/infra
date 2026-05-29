@@ -1,14 +1,12 @@
 # sops creation rules for evattlabs-infra/secrets/.
-# Encrypts to admin (founder) and helicon (workstation) age public keys.
-# After rotating which keys can decrypt: `sops updatekeys secrets/*.enc.yaml`.
+# Single key — helicon workstation age key.
+# Rotate with: `sops updatekeys secrets/*.enc.yaml`
 
 keys:
-  - &admin age1p4weh9d7rhgue32d8nh62a3xudj839z3wtgtt89q9l4d59q67fyqf39y85
-  - &helicon age18rdyyn0tef34dgedskyycy2dwy9c5mssq5hpmdc7t4uzwdzhjurschnja9
+  - &helicon age1z9c9j8j3l8vjfa50s8dfe8xmtffp3sg8zyartekxc44qmjx8ldvqwzyucx
 
 creation_rules:
   - path_regex: secrets/.*\.(yaml|json|env|ini)$
     key_groups:
       - age:
-          - *admin
           - *helicon
