@@ -1,18 +1,7 @@
 # Domain ownership verifications -- third-party services.
 #
-# Both records have literal double-quote characters as part of their TXT
-# content (legacy from how they were originally created). Tofu content
-# strings include the quotes as `\"...\"` to match the live record exactly
-# and keep plan stable.
-
-# Google Search Console / Workspace domain verification.
-resource "cloudflare_record" "google_site_verification" {
-  zone_id = cloudflare_zone.evattlabs_com.id
-  name    = "evattlabs.com"
-  type    = "TXT"
-  content = "\"google-site-verification=KZL9RB64aCgbVSAKhKdHKRXwlQpoVoEehgm6NmcypfE\""
-  ttl     = 3600
-}
+# TXT content strings include literal double-quote characters as `\"...\"`
+# to match the live record exactly and keep plan stable.
 
 # Opaque domain-verification challenge. Hostname is itself a 40-char hex
 # (looks like a sha1) and the content is a different 40-char hex. Origin
