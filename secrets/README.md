@@ -2,8 +2,8 @@
 
 Sops-encrypted local-dev variables for tofu providers (Cloudflare, Namecheap).
 
-GCP creds come from `gcloud auth application-default login` (separate path,
-unrelated to this dir). R2 backend creds come from `~/.aws/credentials [r2]`.
+R2 backend creds come from `~/.aws/credentials [r2]`. Secrets decrypt via direnv
+with the helicon age key at `~/.config/sops/age/keys.txt`.
 
 ## What lives here
 
@@ -41,10 +41,8 @@ If you change which age public keys can decrypt (edit `../.sops.yaml`):
 sops updatekeys dev.enc.yaml
 ```
 
-## Hard rules (per ADR-0015 in kraai-protocol)
+## Hard rules
 
-- Production credentials (the GCP-prod equivalents, etc.) are NEVER stored here.
-  They live in GCP Secret Manager and are fetched by Workload Identity at runtime.
-  This file holds only the things needed for `tofu apply` against Cloudflare and Namecheap.
+- This file holds only what's needed for `tofu apply` against Cloudflare and Namecheap.
 - Namecheap requires IP allowlisting; if your IP changes, update `TF_VAR_namecheap_client_ip`
   in this file AND in the allowlist on namecheap.com Profile → API Access.
