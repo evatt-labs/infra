@@ -1,0 +1,5 @@
+# Desired management-group topology. Add stable IDs, display names, parent IDs,
+# archetype, and policy/RBAC inheritance intent. Do not organize application
+# landing zones by environment when their governance archetype is identical.
+management_groups: []
+

@@ -1,0 +1,5 @@
+# Human access intent. Map Entra groups to eligible roles and scopes, including
+# approvers, activation duration, review cadence, and assignment expiration.
+# Direct permanent privileged user assignments should fail policy validation.
+assignments: []
+

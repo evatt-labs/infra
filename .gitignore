@@ -4,6 +4,7 @@
 *.tfstate
 *.tfstate.*
 *.tfplan
+bootstrap-output.json
 *.tfplan.*
 crash.log
 crash.*.log
@@ -30,3 +31,6 @@ secrets/*
 !secrets/.gitkeep
 .envrc.local
 .wrangler/
+
+# Local codebase knowledge-graph cache
+.codebase-memory/

@@ -1,0 +1,10 @@
+# Pipeline metadata template. Copy into each deployable root and validate it with
+# JSON Schema before dynamically scheduling plans/applies.
+name: replace-me
+order: 0
+identity: replace-me
+state_key: replace-me.tfstate
+dependencies: []
+approval:
+  apply: true
+

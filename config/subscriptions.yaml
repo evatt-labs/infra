@@ -1,0 +1,5 @@
+# Subscription-vending requests. Validate workload, environment, owner, cost
+# center, invoice section alias, destination management group, budget, and expiry.
+# Never store billing credentials or payment data here.
+subscriptions: []
+

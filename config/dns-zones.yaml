@@ -1,0 +1,15 @@
+# Organizational intent for public DNS zones.
+# Add JSON Schema validation before a pipeline consumes this file.
+zones:
+  - name: evattlabs.com
+    owner: platform
+    service: azure-dns
+    lifecycle: production
+    protected_services:
+      - google-workspace
+      - resend
+    migration:
+      source: cloudflare
+      delegation_owner: domain-registration
+      status: discovery
+

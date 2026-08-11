@@ -1,0 +1,5 @@
+# Policy assignment intent. Record initiative version, scope, parameters,
+# enforcement mode, noncompliance messages, exemptions, identity, and remediation
+# dependencies. Exemptions must have an owner and expiration date.
+assignments: []
+
