@@ -59,24 +59,22 @@ create_or_update_custom_role() {
   local role_name="$2"
   local description="$3"
   local actions_json="$4"
-  local role_file
 
-  role_file="$(mktemp)"
-  jq -n \
-    --arg role_id "${role_id}" \
-    --arg role_name "${role_name}" \
-    --arg description "${description}" \
-    --arg scope "${tenant_root_scope}" \
-    --argjson actions "${actions_json}" \
-    '{Name: $role_name, Id: $role_id, IsCustom: true, Description: $description, Actions: $actions, NotActions: [], DataActions: [], NotDataActions: [], AssignableScopes: [$scope]}' \
-    >"${role_file}"
-
-  if az role definition list --name "${role_id}" --query 'length(@)' --output tsv | grep -qx '0'; then
-    az role definition create --role-definition "@${role_file}" --output none
-  else
-    az role definition update --role-definition "@${role_file}" --output none
-  fi
-  rm -f -- "${role_file}"
+  # ARM PUT is an idempotent upsert. The `az role definition create/update`
+  # subcommands resolve definitions at subscription scope and cannot see roles
+  # whose only assignable scope is the tenant root management group.
+  az rest \
+    --method put \
+    --url "https://management.azure.com${tenant_root_scope}/providers/Microsoft.Authorization/roleDefinitions/${role_id}?api-version=2022-04-01" \
+    --body "$(
+      jq -n \
+        --arg role_name "${role_name}" \
+        --arg description "${description}" \
+        --arg scope "${tenant_root_scope}" \
+        --argjson actions "${actions_json}" \
+        '{properties: {roleName: $role_name, description: $description, type: "CustomRole", permissions: [{actions: $actions, notActions: [], dataActions: [], notDataActions: []}], assignableScopes: [$scope]}}'
+    )" \
+    --output none
 }
 
 ensure_application() {
