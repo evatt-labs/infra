@@ -1,0 +1,8 @@
+# Pipeline metadata. Validate with JSON Schema before dynamic scheduling.
+name: terraform-state
+order: 0
+identity: bootstrap-operator
+state_key: foundation/terraform-state.tfstate
+dependencies: []
+approval:
+  apply: true
