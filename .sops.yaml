@@ -1,12 +1,14 @@
 # sops creation rules for evattlabs-infra/secrets/.
-# Single key — helicon workstation age key.
+# Two recipients — terminus workstation + trantor backup workstation (rotated 2026-08-16).
 # Rotate with: `sops updatekeys secrets/*.enc.yaml`
 
 keys:
-  - &helicon age1z9c9j8j3l8vjfa50s8dfe8xmtffp3sg8zyartekxc44qmjx8ldvqwzyucx
+  - &terminus age1n36mcwf7tpl55aypqzukgjuwcpmpytl6ydkjxtuxx9p53yv9hcgqp6dhke
+  - &trantor age10jx43wr9qd3egc6jun3r49xauhtcerprq5y4yps3k2cesryussdqxxav6n
 
 creation_rules:
   - path_regex: secrets/.*\.(yaml|json|env|ini)$
     key_groups:
       - age:
-          - *helicon
+          - *terminus
+          - *trantor
