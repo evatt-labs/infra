@@ -34,3 +34,4 @@ secrets/*
 
 # Local codebase knowledge-graph cache
 .codebase-memory/
+tfplan

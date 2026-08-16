@@ -1,0 +1,8 @@
+# Pipeline metadata. Validate with JSON Schema before dynamic scheduling.
+name: evattlabs-web
+order: 40
+identity: landing-zone
+state_key: applications/evattlabs-web.tfstate
+dependencies: []
+approval:
+  apply: true

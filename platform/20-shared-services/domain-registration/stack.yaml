@@ -1,0 +1,9 @@
+# Pipeline metadata. Validate with JSON Schema before dynamic scheduling.
+name: domain-registration
+order: 21
+identity: platform
+state_key: platform/domain-registration.tfstate
+dependencies:
+  - public-dns
+approval:
+  apply: true

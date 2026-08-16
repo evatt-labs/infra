@@ -1,0 +1,51 @@
+# Reviewed DNS record catalog for evattlabs.com, reconciled against the live
+# Cloudflare zone on 2026-08-16 (see docs/dns-migration.md).
+#
+# Website records (apex alias + www CNAME) are NOT in this catalog; they are
+# derived from the evattlabs-web root's outputs by public-dns/main.tf.
+#
+# Deliberately dropped from the live zone (stale, verified unused):
+#   - _acme-challenge.* TXT: ephemeral ACME tokens from decommissioned homelab
+#     hosts (loki, minio, minio-console, www).
+#   - ad9d065f...evattlabs.com TXT: unidentified 40-hex verification token,
+#     no matching active service; flagged during migration review.
+#   - Cloudflare Email Routing artifacts: live mail is Google Workspace.
+#
+# Cloudflare "ttl: 1" (auto) normalized to 300.
+
+mx:
+  - name: "@"
+    ttl: 3600
+    records:
+      - { preference: 1, exchange: aspmx.l.google.com }
+      - { preference: 5, exchange: alt1.aspmx.l.google.com }
+      - { preference: 5, exchange: alt2.aspmx.l.google.com }
+      - { preference: 10, exchange: alt3.aspmx.l.google.com }
+      - { preference: 10, exchange: alt4.aspmx.l.google.com }
+  - name: send
+    ttl: 3600
+    records:
+      - { preference: 10, exchange: feedback-smtp.us-east-1.amazonses.com }
+
+txt:
+  - name: "@"
+    ttl: 3600
+    values:
+      - "v=spf1 include:_spf.google.com ~all"
+      - "google-site-verification=ZAy8YgnncyFoEiNbITgjYPHQuuOCu5buP0a0-ABwVxg"
+  - name: _dmarc
+    ttl: 300
+    values:
+      - "v=DMARC1; p=quarantine; adkim=s"
+  - name: google._domainkey
+    ttl: 60
+    values:
+      - "v=DKIM1;k=rsa;p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu94v4WVs2jhYZNwy0ibP1BMdfsZuu/h9PpgN4soPDp65BGrNjxIfZHHavnt6DEcXeAc6RxZK8lJcJJTw/QzUfAncxammgV/jkWaUuCdMcIVV+g184/eb/6ZR7R5div8GTJLE5p5d/TBfSEMhY8KQGEAhxJuofJHX4fADu3mqdHnxWfMhDIhE80EWQ9xnMTSxgJm7J5JuxzRsesYQxUikPKhmEMbMnTmChpnCN0Y0yeiGxWv83HH7eMV8Vl6MuI91Cr5mg3ij6Cs8u4cqLjL8rdk5vt33vuItJunYmORRaWbMEuePtuuFufxF8Eaas9gOj5oeUMarzuzt+1sfncDcSwIDAQAB"
+  - name: resend._domainkey
+    ttl: 3600
+    values:
+      - "p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCyqFpJbtW2mI/2GJn06l9HxWctZbky/zV9g2GHxJqhLo8i8kVhdWML+t4K6/vLUBEGKz13PFzir0sEOozJGMMlIvxfiHwChHXl/ikCYwgAZ7zuLKBD1Oafwkdl98V9/fjv3Abo++5cFMQuN+SnJKfbWsV04goNCh34e5l4JuUlVQIDAQAB"
+  - name: send
+    ttl: 3600
+    values:
+      - "v=spf1 include:amazonses.com -all"

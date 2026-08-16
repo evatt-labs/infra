@@ -1,0 +1,9 @@
+# Pipeline metadata. Validate with JSON Schema before dynamic scheduling.
+name: public-dns
+order: 20
+identity: platform
+state_key: platform/public-dns.tfstate
+dependencies:
+  - evattlabs-web
+approval:
+  apply: true
